@@ -1,6 +1,6 @@
 # AGENTS.md — web-crawler (Codex / Claude Code dual-host)
 
-이 레포는 URL과 수집 항목을 받아 사이트를 정찰·대량수집하고 엑셀로 내보내는 범용 웹 크롤링 에이전트다. **`CLAUDE.md`와 `.codex/skills/web-crawler/SKILL.md`가 *어떻게*에 대한 SSOT다.** 이 파일은 Codex용 **실행 계약**이다 — Claude Code는 Skill 런타임으로 같은 규율을 자동 적용받지만, Codex는 Skill 런타임이 없으므로 이 파일이 대신 강제한다.
+이 레포는 URL과 수집 항목을 받아 사이트를 정찰·대량수집하고 엑셀로 내보내는 범용 웹 크롤링 에이전트다. **`CLAUDE.md`와 `.codex/skills/web-crawler/SKILL.md`가 절차 정본이다.** 이 파일은 Codex가 작업 시작 전에 확인할 실행 계약이며, 세부 절차는 정본을 중복하지 않는다.
 
 ## Git 리모트
 
@@ -16,7 +16,7 @@
 
 ## 최초 환경 셋업 (클론 직후 1회)
 
-수집 전에 환경을 준비한다. **한 명령**으로 단계별 설치+검증을 하고, 이미 된 단계는 skip한다:
+수집 전에 환경을 준비한다. 이미 된 단계는 건너뛴다:
 
 ```powershell
 # Windows (PowerShell) — 실행 정책 우회가 표준
@@ -27,23 +27,7 @@ powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 python -m venv .venv && . .venv/bin/activate && python scripts/bootstrap.py
 ```
 
-단계: ① Python deps → ② 브라우저(Chromium) → ③ agent-browser(표준 정찰 도구) → ④ preflight 검증.
-실패하면 "다음에 실행할 정확한 명령"이 출력된다. 모드: 기본 full(표준) / `--core-only`(agent-browser 제외) / `--skip-browser` / `-VerbosePip`(pip 상세 로그).
-
-**`py` 런처 깨짐 자동 처리**: `setup.ps1`은 `py -3`/`python`/`python3`를 실제 실행해 3.10+를 확인하고 성공하는 쪽으로 venv를 만든다. `py -3`가 `No installed Python found!`로 실패하면 자동으로 `python`으로 fallback한다. 그래도 venv가 안 생기면 직접: `python -m venv .venv` → `.\.venv\Scripts\python.exe scripts\bootstrap.py`.
-
-**수동/디버깅 시 실제 동작하는 명령 (Windows)**:
-```powershell
-python --version ; py -3 --version       # 어느 쪽이 동작하는지 먼저 확인 (py 깨졌으면 python 사용)
-python -m venv .venv ; .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt --progress-bar off    # 멈춘 듯하면 끝에 -v 추가
-scrapling install                        # Chromium 1회 설치 (내부에서 playwright install chromium 수행 — 따로 또 X)
-npm.cmd install -g agent-browser ; agent-browser.cmd install   # PowerShell은 .cmd 사용
-python scripts\preflight.py              # 검증: core / agent-browser 분리 PASS·WARN·FAIL
-```
-- `python -m scrapling`은 동작 안 함 → `scrapling install`(venv 활성화) 또는 `.\.venv\Scripts\scrapling.exe install`.
-- pip이 진행 없이 멈춘 듯하면 정상(대용량 휠 다운로드). 진행 확인: `.\.venv\Scripts\python.exe -m pip install -r requirements.txt --progress-bar off -v`.
-- 검증은 `scripts/preflight.py`가 담당: **core(Python/Scrapling/Playwright)**와 **agent-browser**를 분리 보고. core 통과·agent-browser 실패면 "전체 설치 미완료"(종료코드 1). 전체 가이드는 `README.md` "처음 설치하기".
+설치·실패 복구·모드별 명령은 `README.md`의 “처음 설치하기”를 따른다. 설치 뒤에는 `python scripts/preflight.py`로 확인한다.
 
 ## 스킬 소스 (생성 미러)
 
@@ -55,7 +39,7 @@ python scripts\preflight.py              # 검증: core / agent-browser 분리 P
 
 사용자가 "크롤링/스크래핑/수집/~를 모아줘/입찰공고 수집" 등을 요청하면:
 
-1. **즉흥 처리 금지.** `.codex/skills/web-crawler/SKILL.md`를 단계대로 실행한다. 절차를 요약하고 임의로 구현하지 않는다. **폴백 재구현 금지** — `requests`/`urllib`/`httpx`/`BeautifulSoup`로 직접 수집하거나 인라인으로 긁지 않는다. 수집은 항상 생성한 `crawl_script.py` 안의 **Scrapling 또는 Playwright**로만 한다.
+1. **즉흥 처리 금지.** `.codex/skills/web-crawler/SKILL.md`를 단계대로 실행한다. `requests`/`urllib`/`httpx`/`BeautifulSoup` 인라인 수집은 금지하며, 수집은 생성한 `crawl_script.py` 안의 Scrapling 또는 Playwright로만 한다.
 
 2. **절대 규칙 0 — 도메인 히스토리 우선.** 정찰하기 전에 반드시 `fingerprints/<sanitized_domain>/profile.json`과 `output/<도메인>/`을 먼저 본다. 프로필이 있으면 `notes`/`fetcher_type`/`antibot_strategy`를 그대로 채택하고 정찰을 건너뛰어 Step 3으로 점프한다. profile.json이 있는데 무시하고 정찰부터 다시 하는 것은 금지(5~20분 비싼 작업 반복). 알려진 도메인 목록은 `CLAUDE.md` 의 생성 블록 참조.
 
@@ -76,21 +60,12 @@ python scripts\preflight.py              # 검증: core / agent-browser 분리 P
 
 ## 안전 — 하드룰 (위반 금지)
 
-- **자동 접근 차단을 만나면 통지 후 사용자 선택** — CAPTCHA·WAF·봇 탐지는 법적으로 같은 보호조치다. 어느 쪽이든 **자동으로 넘어가지 않고 이음매를 통과할 때마다 한 번 알리고 사용자가 고른다**. '진행' 이면 그대로 간다 — 근거를 묻지도 검증하지도 않는다. 통지를 면제하는 것은 도메인이 아니라 그 프로필이 **지금 들고 있는** `consent` 기록이다(sticky) — 사다리 A 로 내려가 프로필이 배포 대상이 되면 그 기록은 지워지므로(사용자의 통지 이력을 배포되는 파일에 실어 보내지 않는다), 사이트가 나중에 새로 막으면 다시 통지한다. 상세는 `.codex/skills/web-crawler/SKILL.md` Step 3 "이음매 통지 게이트".
-- **CAPTCHA 자동 풀이 금지** — 위 통지 게이트와 별개다. reCAPTCHA/hCaptcha 를 **프로그램으로 푸는 것**은 하지 않는다. 사용자가 agent-browser 로 직접 풀고 이어가는 것은 가능하다.
-- **로그인 자격증명 저장 금지** — ID/PW를 코드·메모리·파일에 저장하지 않는다. 사용자가 직접 로그인 → 쿠키만 추출(`output/<도메인>/cookies.json`, `.gitignore`가 차단).
-- **robots.txt 제한** 발견 시(`Disallow: /` 또는 대상 경로 차단) 진행 여부를 사용자에게 묻는다.
-- **PII 감지 필수** — 수집 데이터에 전화번호/주민번호/이메일 등이 섞이면 `detect_pii(data)`로 경고하고 보고한다.
-- **법적 위험이 큰 요청은 구체적으로 경고** — 저작권 침해 목적의 본문 복제(분량 축)·개인정보 대량 수집(성격 축)·명시적으로 금지된 재배포(목적 축). **어느 축이 왜 걸리는지 짚어서 알린 뒤 진행 여부는 사용자가 정한다** — 근거를 묻지도 검증하지도 않는다. **약관이 크롤링을 금지한다는 사실만으로는 여기 해당하지 않는다** — 그건 접근의 계약 층이고, 위 통지 게이트로 간다.
-- **수집 0건이면 즉시 중단·보고** — 계속 시도하면 ban 위험.
-
-> **위 '경고' 규칙과 통지 게이트는 같은 층위다.** 경고는 요청이 **어떤 위험 축에 걸리는지**를,
-> 게이트는 **기술적 차단을 만났다는 사실**을 알린다. 알리는 대상만 다를 뿐 둘 다 알리는 데서
-> 끝나고 고르는 쪽은 사용자다 — 어느 쪽도 요청 자체를 막지 않으며, 근거를 묻지도 검증하지도
-> 않는다.
->
-> 이 문서가 정의하는 것은 **도구의 동작**이다. 실행하는 AI 에이전트 자신의 판단 기준은 별개로
-> 작동하며 이 문서가 그것을 대신 약속하지 않는다 — `ACCEPTABLE_USE.md` 참조.
+- **자동 접근 차단**(CAPTCHA·WAF·봇 탐지)을 만나면 즉시 통지하고 사용자에게 `[진행 / 중단]` 선택을 받는다. 상세 통지·동의 기록은 스킬 Step 3 “이음매 통지 게이트”를 따른다.
+- **통지를 면제하는 것은 도메인이 아니라 그 프로필이 **지금 들고 있는** `consent` 기록이다.** 프로필이 있어도 `consent`가 없으면 이번이 최초 이음매 통과이므로 다시 통지한다.
+- **CAPTCHA 자동 풀이와 로그인 자격증명 저장은 금지**한다. 사용자가 직접 로그인한 세션 쿠키는 `.gitignore`된 출력 경로에만 둔다.
+- **법적 위험 요청**(저작권 본문 복제·개인정보 대량 수집·명시적 재배포 금지)은 위험 축을 짚어 경고하고, 진행 여부는 사용자가 정한다. 실제 실행은 에이전트의 상위 안전 기준과 도구 권한 범위 안에서만 한다.
+- robots.txt 제한은 사용자 확인을 거치고, PII 감지는 `detect_pii(data)`로 경고한다.
+- 수집 결과가 0건이면 즉시 중단·보고한다.
 
 ## 빠른 참조
 
