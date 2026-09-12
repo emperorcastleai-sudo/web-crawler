@@ -10,9 +10,9 @@
 
 ## 추가 개발의 브랜치·PR 검증
 
-새 기능, 동작·구조 변경, 여러 파일의 코드·테스트 수정만 Claude ↔ Codex 공용 GitHub PR 릴레이를 따른다. 절차 정본은 `/Users/hwangjaeseong/Claude/CLAUDE.md`의 “Claude ↔ Codex 릴레이”와 `docs/decisions/0001-git-relay.md`, `docs/decisions/0002-relay-conventions.md`, `docs/decisions/0006-pr-based-relay.md`다. 이 레포의 브랜치·PR·push 대상은 항상 `origin`이며 `upstream`에는 push하지 않는다.
+새 기능, 동작·구조 변경, 여러 파일의 코드·테스트 수정만 Claude ↔ Codex 공용 GitHub PR 릴레이를 따른다. 절차 정본은 `/Users/hwangjaeseong/Claude/CLAUDE.md`의 “Claude ↔ Codex 릴레이”와 컨테이너 `/Users/hwangjaeseong/Claude/docs/decisions/0001-git-relay.md`, `/Users/hwangjaeseong/Claude/docs/decisions/0002-relay-conventions.md`, `/Users/hwangjaeseong/Claude/docs/decisions/0006-pr-based-relay.md`다 — **이 저장소 안이 아니라 컨테이너 루트에 있다.** 이 레포의 브랜치·PR·push 대상은 항상 `origin`이며 `upstream`에는 push하지 않는다.
 
-**PR 전 자체검증 필터**: 위 대상이라도 `docs/decisions/0008-self-verification-tier.md`의 고위험 목록(정산·금액/스키마 변경/외부 시스템 연동/여러 저장소 걸친 변경/되돌리기 어려운 변경/권한·보안·비밀정보/의존성·lockfile/CI·빌드·배포/사용자 동작 변경)에 하나도 안 걸리고, 정량 기준(변경 파일 5개 이하, 파일당 diff 200줄 이하, 새 디렉토리·저장소 없음)까지 통과하면 PR 없이 자체검증(2패스: 결함 탐색 → 별도 컨텍스트의 독립 재검증)으로 먼저 거른다. 하나라도 걸리면 곧장 위 PR 릴레이로.
+**PR 전 자체검증 필터**: 위 대상이라도 컨테이너 `/Users/hwangjaeseong/Claude/docs/decisions/0008-self-verification-tier.md`의 고위험 목록(정산·금액/스키마 변경/외부 시스템 연동/여러 저장소 걸친 변경/되돌리기 어려운 변경/권한·보안·비밀정보/의존성·lockfile/CI·빌드·배포/사용자 동작 변경)에 하나도 안 걸리고, 정량 기준(변경 파일 5개 이하, 파일당 diff 200줄 이하, 새 디렉토리·저장소 없음)까지 통과하면 PR 없이 자체검증(2패스: 결함 탐색 → 별도 컨텍스트의 독립 재검증)으로 먼저 거른다. 하나라도 걸리면 곧장 위 PR 릴레이로.
 
 문서 단독 정정, 생성 미러·도메인 목록 동기화, append-only 작업 로그는 추가 개발이 아니므로 브랜치·PR 의무 대상에서 제외한다. 다만 관련 검사와 검토는 수행한다.
 
