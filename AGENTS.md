@@ -2,6 +2,12 @@
 
 이 레포는 URL과 수집 항목을 받아 사이트를 정찰·대량수집하고 엑셀로 내보내는 범용 웹 크롤링 에이전트다. **`CLAUDE.md`와 `.codex/skills/web-crawler/SKILL.md`가 *어떻게*에 대한 SSOT다.** 이 파일은 Codex용 **실행 계약**이다 — Claude Code는 Skill 런타임으로 같은 규율을 자동 적용받지만, Codex는 Skill 런타임이 없으므로 이 파일이 대신 강제한다.
 
+## Git 리모트
+
+- `origin` = 사용자 계정 fork(`emperorcastleai-sudo/web-crawler`, push 가능). `upstream` = 원본 저작자 repo(`byungjunjang/web-crawler`, push 불가 — 참고·pull 전용).
+- **커밋·push는 항상 `origin`으로.** `upstream`에는 절대 push하지 않는다 — 애초에 권한도 없고, fingerprints/output 등 사용자 수집 데이터가 남의 repo에 쌓이는 걸 막기 위한 구조다.
+- 원본 최신 변경을 받아오고 싶으면 `git fetch upstream` 후 필요한 부분만 병합/체리픽. `git push upstream ...`은 시도하지 않는다.
+
 ## 최초 환경 셋업 (클론 직후 1회)
 
 수집 전에 환경을 준비한다. **한 명령**으로 단계별 설치+검증을 하고, 이미 된 단계는 skip한다:
