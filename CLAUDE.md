@@ -31,7 +31,7 @@ python -m venv .venv && . .venv/bin/activate && python scripts/bootstrap.py   # 
 
 ### 알려진 도메인 (14개 profile commit됨)
 
-`books.toscrape.com`, `builtini.co.kr`, `celimax.co.kr`, `data.seoul.go.kr`, `db.itkc.or.kr`, `g2b.go.kr`, `guesskorea.com`, `made-in-china.com`, `wanted.co.kr`, `www.11st.co.kr`, `www.fss.or.kr`, `www.gsmarena.com`, `www.k-startup.go.kr`, `www.kurly.com` — 정찰 없이 바로 수집 시도 가능.
+`books.toscrape.com`, `builtini.co.kr`, `celimax.co.kr`, `data.seoul.go.kr`, `db.itkc.or.kr`, `g2b.go.kr`, `guesskorea.com`, `made-in-china.com`, `wanted.co.kr`, `www.11st.co.kr`, `www.fss.or.kr`, `www.gsmarena.com`, `www.k-startup.go.kr`, `www.kurly.com` — 이 도메인들은 정찰 없이 바로 수집 시도 가능.
 
 <!-- END GENERATED: domain-list -->
 
@@ -44,7 +44,7 @@ python -m venv .venv && . .venv/bin/activate && python scripts/bootstrap.py   # 
 - **자동 접근 차단(CAPTCHA·WAF·봇탐지) 만나면 통지 후 사용자 선택** — 심사 아님, '진행'이면 근거 안 물음. 상세: SKILL.md Step 3 "이음매 통지 게이트"
 - **CAPTCHA 자동 풀이 금지** (사용자가 agent-browser로 직접 푸는 건 가능)
 - **로그인 자격증명 자동 저장 금지** — 사용자가 직접 로그인 → 쿠키만 추출
-- **법적 위험 요청(저작권 본문 복제/PII 대량 수집/금지된 재배포)은 축을 짚어 경고 후 사용자 선택** — 약관상 금지만으로는 해당 안 함(그건 통지 게이트로)
+- **법적 위험 요청(저작권 본문 복제/개인정보 대량 수집/금지된 재배포)은 축을 짚어 경고 후 진행 여부는 사용자가 정한다** — 약관상 금지만으로는 해당 안 함(그건 통지 게이트로)
 - **robots.txt 제한 시 사용자 확인**, **PII 감지 시 `detect_pii(data)`로 경고**
 
 에이전트 자신의 판단 기준과 도구 동작 규정의 관계는 `ACCEPTABLE_USE.md` 참조.
@@ -54,14 +54,18 @@ python -m venv .venv && . .venv/bin/activate && python scripts/bootstrap.py   # 
 | 작업 | 도구 |
 |------|------|
 | 도메인 히스토리 조회/저장 | `scripts/domain_profile.py` (`DomainProfile`) |
-| 정찰 (표준) | agent-browser |
-| 정찰 폴백 | Claude in Chrome / ChatGPT Chrome Browser Use — agent-browser 불가 시만 |
-| 대량 데이터 수집 | Scrapling — **agent-browser로 대량 수집 절대 금지** |
+| 정찰 (Codex 표준) | 내장 브라우저(iab) — 구조·셀렉터·페이지네이션·건수 확인 |
+| 정찰 (Claude 표준) | agent-browser |
+| Codex API 네트워크 감시·로그인 보조 | agent-browser |
+| 정찰 폴백 | Codex: agent-browser → DynamicFetcher/Playwright / Claude: Claude in Chrome → DynamicFetcher/Playwright |
+| 대량 데이터 수집 | Scrapling — **정찰 브라우저로 대량 수집 절대 금지** |
 | 통지 이후 브라우저 세션 필요 시 | Chrome CDP (`scripts/chrome_cdp.py`) |
 | 진행상황 체크포인트 | `scripts/progress.py` |
 | 엑셀 출력 | `scripts/export_excel.py` |
 
 **원격 전용 환경(Cowork 등)은 정찰까지만** — egress 제한·데이터센터 IP·호스트 CDP 미접속으로 수집 재현 불가. 수집은 로컬에서.
+
+Codex iab는 일반 XHR/fetch 응답 캡처와 인증 쿠키 전달 경로가 없으므로, 해당 정보가 필요할 때만 agent-browser 전용 프로필 경로로 전환한다. iab·agent-browser·Claude in Chrome은 모두 정찰 전용이며 수집은 `crawl_script.py`에서만 한다.
 
 ## 검증 통과 기준 (Step 5)
 

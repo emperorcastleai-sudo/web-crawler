@@ -59,7 +59,7 @@ def test_captcha_rule_is_layered_with_waf():
     """G2 — CAPTCHA 와 WAF 가 같은 층위여야 한다. 자동 풀이 금지는 별개로 유지."""
     text = CLAUDE_MD.read_text(encoding="utf-8")
     assert "CAPTCHA 자동 풀이 금지" in text
-    assert "CAPTCHA·WAF·봇 탐지는 법적으로 같은 보호조치" in text
+    assert "자동 접근 차단(CAPTCHA·WAF·봇탐지) 만나면 통지 후 사용자 선택" in text
 
 
 def _section(path: Path, start_heading: str, end_heading: str) -> str:
@@ -86,20 +86,20 @@ def _section(path: Path, start_heading: str, end_heading: str) -> str:
 
 
 def _absolute_rule_zero_block() -> str:
-    """CLAUDE.md 의 '★ 절대 규칙 0' 절만 잘라 반환 (다음 '##' 절 직전까지)."""
+    """정본 SKILL.md 의 Step 1-A 프로필 재사용 분기만 잘라 반환."""
     return _section(
-        CLAUDE_MD,
-        "## ★ 절대 규칙 0: 도메인 히스토리 우선 (모든 수집의 시작)",
-        "## 범위 / 운영 안전 규칙",
+        SKILL,
+        "### Step 1-A: 도메인 프로필 확인",
+        "### Step 1-B: Phase 0 공인 우회로 체크",
     )
 
 
 def _fetcher_decision_tree_section() -> str:
-    """CLAUDE.md 의 'Fetcher 선택 의사결정 트리' 절만 잘라 반환 (다음 '##' 절 직전까지)."""
+    """정본 SKILL.md 의 이음매 통지 게이트 절만 잘라 반환."""
     return _section(
-        CLAUDE_MD,
-        "## Fetcher 선택 의사결정 트리",
-        "## Spider 활용 기준",
+        SKILL,
+        "### ■ 이음매 — 통지 게이트 ■",
+        "### 사다리 B — 상대가 막고 있다",
     )
 
 
@@ -114,10 +114,10 @@ def test_profile_reuse_notice_is_conditional_on_consent():
     되므로, 문서 전체가 아니라 이 블록만 잘라서 검사한다.
     """
     block = _absolute_rule_zero_block()
-    assert "consent 기록이 있나" in block, (
+    assert "consent 기록이 없는" in block, (
         "★ 절대 규칙 0 블록의 재사용 분기가 consent 기록 유무로 갈라지지 않습니다"
     )
-    assert "프로필이 있다는 사실 자체는 게이트를 면제하지 않는다" in block
+    assert "이번이 최초 통과" in block
 
 
 def test_fetcher_decision_tree_notice_is_conditional_on_consent():
@@ -128,10 +128,10 @@ def test_fetcher_decision_tree_notice_is_conditional_on_consent():
     한쪽이 통과한다고 다른 쪽의 회귀를 가려서는 안 된다.
     """
     section = _fetcher_decision_tree_section()
-    assert "기록이 없으면" in section, (
+    assert "`consent`가 없다면" in section, (
         "Fetcher 선택 의사결정 트리의 Step 0 분기가 consent 기록 유무를 조건으로 걸지 않습니다"
     )
-    assert "이번이 최초 통과" in section
+    assert "이번이 최초로 이음매를 넘는 것" in section
 
 
 def _antibot_banner_section() -> str:
@@ -244,7 +244,7 @@ SAFETY_RULE_SECTIONS = [
         "진행 여부는 사용자가 정합니다", id="README.md",
     ),
     pytest.param(
-        CLAUDE_MD, "## 범위 / 운영 안전 규칙", "## 핵심 도구",
+        CLAUDE_MD, "## 범위 / 운영 안전 규칙", "## 도구 역할 분리",
         "진행 여부는 사용자가 정한다", id="CLAUDE.md",
     ),
     pytest.param(
@@ -357,11 +357,6 @@ FREQUENCY_CLAIM_SECTIONS = [
         README, "## Fingerprint 도메인 별 수집 레시피 기록 (재수집 가속)", "## 레포 구조",
         "확인이 면제되는 근거는 도메인이 아니라 프로필이 지금 들고 있는 `consent` 기록입니다",
         id="README.md",
-    ),
-    pytest.param(
-        CLAUDE_MD, "## ★ 절대 규칙 0: 도메인 히스토리 우선 (모든 수집의 시작)", "## 범위 / 운영 안전 규칙",
-        "통지는 도메인당 1회가 아니라 이음매를 통과할 때마다 1회다",
-        id="CLAUDE.md",
     ),
     pytest.param(
         AGENTS_MD, "## 안전 — 하드룰 (위반 금지)", "## 빠른 참조",

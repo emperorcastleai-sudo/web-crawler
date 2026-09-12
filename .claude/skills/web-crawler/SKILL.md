@@ -8,9 +8,9 @@ description: URL과 수집 항목을 받아 사이트를 정찰하고 데이터�
 ## 절대 규칙
 
 1. **수집에는 Scrapling 또는 Playwright만 사용한다.** `requests`, `urllib`, `httpx`, `BeautifulSoup`로 직접 수집하지 않는다.
-2. **agent-browser는 정찰 전용이다.** agent-browser에서 `page.evaluate()`로 데이터를 추출하거나 DOM을 파싱하여 수집하는 것은 금지. agent-browser는 구조 파악, 스크린샷, 네트워크 감시에만 사용한다.
+2. **정찰 브라우저는 정찰 전용이다.** Codex의 기본은 내장 브라우저(iab)이며, agent-browser와 Claude in Chrome도 구조 파악·스크린샷·네트워크 감시에만 사용한다. 어떤 정찰 브라우저에서도 전량 데이터를 추출하거나 DOM을 파싱해 수집하지 않는다.
 3. **반드시 crawl_script.py를 생성하고 실행한다.** 스크립트 없이 인라인으로 수집하지 않는다.
-4. **정찰과 수집의 역할을 분리한다.** 정찰(agent-browser) → 수집(crawl_script.py 내 Scrapling/Playwright) → 출력(openpyxl).
+4. **정찰과 수집의 역할을 분리한다.** 정찰(호스트별 기본 브라우저) → 수집(crawl_script.py 내 Scrapling/Playwright) → 출력(openpyxl).
 
 > **규칙 1 예외 — Playwright 직접 사용이 허용되는 경우:**
 > SPA 세션 보호 사이트(WebSquare, 내부 API 403 등)에서는 crawl_script.py 안에서 Playwright를 직접 사용하여 SPA를 로드하고, `page.on("response")`로 XHR 응답을 인터셉트하여 데이터를 수집할 수 있다. 이 경우에도 agent-browser가 아닌 Playwright sync_api를 사용한다.
@@ -20,7 +20,7 @@ description: URL과 수집 항목을 받아 사이트를 정찰하고 데이터�
 ```
 Step 1: 입력 파싱 → Step 1-A: 도메인 프로필 확인 → Step 1-B: Phase 0 공인 우회로 체크
     ↓                  (재사용 Yes → Step 3)        (해결되면 정찰 스킵 → Step 4)
-Step 2: 정찰 (agent-browser) → Step 2-A: 인증 처리 (필요 시)
+Step 2: 정찰 (호스트별 기본 브라우저) → Step 2-A: 인증 처리 (필요 시)
     ↓
 Step 3: 사이트 분류 & 수집 전략 결정 ← 핵심 의사결정
     ↓
@@ -101,7 +101,7 @@ profile_mgr.save(domain, {
 
 ---
 
-## Step 2: 정찰 (agent-browser)
+## Step 2: 정찰 (호스트별 기본 브라우저)
 
 ### Step 2-0: robots.txt 확인 (필수 · 정찰 전)
 
@@ -126,28 +126,29 @@ if verdict["crawl_delay"]:
 - `error` 가 있으면 "허용됨" 이 아니라 "확인 못 함" 이다 — 사용자에게 그대로 알린다.
 - robots.txt 는 법적 구속력이 없지만 표지판이다. 무시했다는 사실은 "알고도 했다" 의 정황이 된다.
 
-> **agent-browser는 이 프로젝트의 표준 정찰 도구다 (선택 아님).** 단순 정적 사이트를 긁더라도 정찰 단계에서는 agent-browser를 먼저 사용한다.
+> **Codex의 표준 정찰 도구는 내장 브라우저(iab)다.** 정찰 시작 전 CUA의 `cua.getState()`로 iab를 확인하고, `cua.createBrowserTab("iab", <URL>, {visible:false})`로 탭을 연다. `getAXState()` 또는 `tab.playwright.domSnapshot()`으로 구조·셀렉터·페이지네이션·건수를 확인한다. 사용자가 Chrome을 명시했을 때만 연결된 Chrome을 선택한다.
 >
-> **시작 전 (양 host 공통)**: 우선 `agent-browser skills get core --full`을 실행해 agent-browser 사용법(snapshot-and-ref 워크플로우, 네트워크 캡처 등)을 로드한다. 설치된 구버전이 `Unknown command: skills`를 반환하면 `agent-browser --help`에서 snapshot/network 명령을 로드한다. 이 오류만으로 agent-browser 자체가 불능이라고 판정하거나 폴백으로 내려가지 않는다.
+> **Claude의 표준 정찰 도구는 agent-browser다.** 시작 전 `agent-browser skills get core --full`로 사용법을 로드한다. 구버전이 `Unknown command: skills`를 반환하면 `agent-browser --help`에서 snapshot/network 명령을 확인한다.
 >
-> CLI가 없거나 브라우저 실행이 막힌 제한 환경에서만 아래 **정찰 폴백 티어**로 내려간다. 환경 셋업·검증은 `scripts/setup.ps1`(Windows) 또는 `scripts/bootstrap.py` + `scripts/preflight.py`.
+> iab는 일반 XHR/fetch 요청·응답 본문을 캡처하지 않는다. Codex에서 API 식별이 필요하거나 iab가 없으면 `agent-browser`를 정찰 보조로 사용한다. agent-browser도 실행할 수 없으면 아래 폴백으로 내려간다. 환경 셋업·검증은 `scripts/setup.ps1`(Windows) 또는 `scripts/bootstrap.py` + `scripts/preflight.py`.
 >
 > | 티어 | 도구 | host |
 > |---|---|---|
-> | 표준 | `agent-browser` | 양 host 공통 |
+> | 표준 (Codex) | **내장 브라우저 iab** (`mcp__cua_repl`) | Codex 전용 |
+> | 표준 (Claude) | `agent-browser` | Claude Code / Cowork |
+> | 보조 (Codex) | `agent-browser` | iab의 네트워크 감시 필요 시 또는 iab 미제공 시 |
 > | 폴백 1 (Claude) | **Claude in Chrome** (`mcp__claude-in-chrome__*`) | Claude Code / Cowork 전용 |
-> | 폴백 1 (Codex) | **ChatGPT Chrome 플러그인 Browser Use** (`chrome:control-chrome`) | Codex 전용 (Chrome 확장 연결 시) |
 > | 폴백 2 (공통) | Scrapling `DynamicFetcher` / Playwright `sync_api` | 양 host 공통 |
 >
-> **host별 분기:** Claude Code/Cowork는 `agent-browser → Claude in Chrome → 폴백 2`, Codex는 `agent-browser → ChatGPT Chrome Browser Use(연결 시) → 폴백 2`다. Codex에 `chrome:control-chrome` 스킬이 없거나 ChatGPT Chrome 확장이 연결되지 않으면 Codex 폴백 1을 건너뛴다. Codex에서 Claude in Chrome을 찾지 않는다.
+> **host별 분기:** Claude Code/Cowork는 `agent-browser → Claude in Chrome → 폴백 2`, Codex는 `iab → agent-browser(네트워크 보조 또는 iab 미제공) → 폴백 2`다. Codex에서 Claude in Chrome을 찾지 않는다.
 >
 > 폴백을 썼으면 어느 티어였는지 Step 5-A의 profile.json `notes`에 남긴다.
 
 ### 정찰 규칙
-- agent-browser 접근 **최대 2회** 시도
+- 각 정찰 브라우저 접근은 **최대 2회** 시도
 - 2회 실패 시 **Step 3 의 이음매 통지 게이트로 돌아간다** — 정찰 단계에서도 사다리 B 진입은 사용자 확인을 거친다
 - 같은 도메인에 **5분 내 3회 이상 접근하지 않음**
-- **정찰 JS 는 ASCII 로만 쓴다.** `agent-browser eval -b <base64>` 가 페이로드를 UTF-8 이 아닌
+- **agent-browser 정찰 JS 는 ASCII 로만 쓴다.** `agent-browser eval -b <base64>` 가 페이로드를 UTF-8 이 아닌
   인코딩으로 디코딩해 한글이 깨진다 — `/입찰|공고/` 가 `/?낆같|怨듦퀬/` 로 들어가
   `SyntaxError: Invalid regular expression` 이 난다. 한글이 필요하면
   `'\uC785\uCC30'`(= 입찰) 처럼 유니코드 이스케이프로 적는다. (파일을 만들 때도 `Get-Content -Raw` 는 UTF-8 을
@@ -162,7 +163,7 @@ if verdict["crawl_delay"]:
 
 ### 네트워크 감시 (필수)
 
-agent-browser에서 네트워크 요청을 캡처하여 API를 식별한다.
+agent-browser에서 네트워크 요청을 캡처하여 API를 식별한다. Codex iab로 구조 정찰을 마친 경우에도, 이 네트워크 단계만 agent-browser로 보조할 수 있다.
 
 **API 식별 2단계:**
 1. **URL 패턴 휴리스틱**: `/api/`, `/graphql/`, `/v1/` 포함, `application/json` 응답, 광고/분석 제외
@@ -212,33 +213,27 @@ agent-browser를 못 쓸 때 Claude 계열 host에서 쓴다. **사용자의 실
 >
 > **원격 전용 환경(Cowork)에서는 정찰까지만 가능하다.** 샌드박스 egress가 기본 "package managers only"라 대상 사이트 직접 접속이 막히고, 통과시켜도 데이터센터 IP라 안티봇 프로필이 재현되지 않으며, VM에서 호스트 Chrome의 CDP 포트(9222)에 붙을 수 없어 Akamai 대응이 불가능하다. 원격에서는 정찰 → profile.json 갱신까지 하고, 수집은 로컬에서 이어서 실행한다.
 
-### ChatGPT Chrome Browser Use 폴백 절차 (Codex 폴백 1)
+### Codex 내장 브라우저(iab) 절차 (표준)
 
-agent-browser를 못 쓰고 현재 Codex 세션에 `chrome:control-chrome` 스킬이 있으며 사용자의 ChatGPT Chrome 확장이 연결돼 있을 때만 쓴다. 스킬을 먼저 읽고 그 Bootstrap·Chrome 선택 절차를 그대로 따른다. 반드시 `agent.browsers.get("chrome")`으로 **Chrome을 명시 선택**하고, 연결 후 `chrome.nameSession(...)`을 호출한 다음 탭을 생성하거나 사용자가 지정한 탭을 claim한다. 다른 브라우저 surface로 자동 대체하지 않는다.
+Codex에서는 CUA `mcp__cua_repl`의 iab를 기본으로 쓴다. 먼저 `cua.getState()`로 iab를 확인한 뒤 `cua.createBrowserTab("iab", <URL>, {visible:false})`를 호출한다. 정찰 뒤 생성한 탭은 닫아 임시 상태를 남기지 않는다.
 
-이 경로는 **사용자의 실제 Chrome**을 조종하므로 기존 브라우저 상태·로그인 세션·실제 IP가 적용되는 것이 장점이다. 단 브라우저 쿠키·localStorage·프로필·비밀번호를 직접 조회하지 않는다.
-
-| 정찰 항목 | Browser Use API |
+| 정찰 항목 | iab API |
 |---|---|
-| ① 스냅샷·DOM 구조 | `tab.playwright.domSnapshot()` + 필요 시 `tab.screenshot()` |
-| ② 로딩 방식 판단 | `tab.playwright.evaluate()`의 read-only page scope에서 `#__next`/`#root`/`[data-reactroot]`·초기 아이템 유무 확인 |
-| ③ CSS 셀렉터 | `tab.playwright.locator()`의 `count()` 또는 read-only `evaluate()`로 반복되는 `tag.class` 조합과 매칭 개수만 집계 |
+| ① 스냅샷·DOM 구조 | `getAXState()` 또는 `tab.playwright.domSnapshot()` |
+| ② 로딩 방식 판단 | read-only `tab.playwright.evaluate()`에서 `#__next`/`#root`/`[data-reactroot]`·초기 아이템 유무 확인 |
+| ③ CSS 셀렉터 | `tab.playwright.locator()`의 `count()` 또는 read-only `evaluate()`로 반복 요소 후보를 집계 |
 | ④ pagination | `locator()`/`evaluate()`로 next/pager URL·텍스트 확인 후 `expectNavigation()` + `click()`으로 1회 검증 |
 | ⑤ 총 건수 | read-only `evaluate()`로 표시 총계 또는 `총 페이지 × 페이지당 건수` 확인 |
 
-**네트워크 감시는 제한적이다 (실측).**
+**네트워크 감시는 iab의 범위가 아니다.** iab가 제공하는 것은 정찰용 DOM·접근성·스크린샷이다. `/api/`·`/graphql/`·`/v1/` 후보 또는 JSON 응답 필드 매핑이 필요하면 agent-browser의 네트워크 캡처를 보조로 사용한다. 그것도 불가능할 때만 Playwright `sync_api`의 `page.on("response")`를 수집 스크립트 안에서 사용한다. profile.json `notes`에는 실제 사용한 조합을 기록한다.
 
-1. `tab.capabilities.list()`에 `pageAssets`가 있으면 해당 capability의 `documentation()`을 먼저 읽고 `pageAssets.list()`로 현재 페이지에서 관찰된 script/image/stylesheet/font URL을 확인한다.
-2. Browser Use 공개 API는 일반 document/XHR/fetch 요청 목록과 응답 status/header/body 캡처를 제공하지 않는다. read-only `evaluate()` scope에서도 `window.performance`/`document.defaultView.performance`를 사용할 수 없었다.
-3. 따라서 `/api/`·`/graphql/`·`/v1/` 후보나 JSON 응답 필드 매핑이 필요한 사이트는 **네트워크 감시 부분에 한해** 폴백 2의 Playwright `sync_api`(`page.on("response")`)를 병행한다. profile.json `notes`에는 `Codex 폴백 1 Chrome Browser Use + 폴백 2 network 보조`처럼 둘 다 기록한다.
-
-**실측 기준 (2026-08-19):** 실제 ChatGPT Chrome 확장 세션의 `books.toscrape.com`에서 DOM 스냅샷, `article.product_pod` 20개, `catalogue/page-{n}.html`, `Page 1 of 50`, 총 1000건을 재현했고 다음 페이지 클릭으로 `page-2.html → page-3.html` 패턴을 확인했다. `pageAssets`는 31개(이미지 21, 스크립트 6, 스타일시트 4)를 관찰했다. 이 사이트는 정적이라 XHR/API 후보는 없었다.
-
-> **여기서도 수집은 금지다.** Browser Use의 `evaluate()`/locator는 구조·셀렉터·페이지네이션·건수 판정에만 쓴다. DOM을 루프로 전량 추출하지 않는다. 수집은 반드시 `crawl_script.py` 안의 Scrapling 또는 Playwright로 한다.
+> **여기서도 수집은 금지다.** iab의 `evaluate()`/locator는 구조·셀렉터·페이지네이션·건수 판정에만 쓴다. DOM을 루프로 전량 추출하지 않는다. 수집은 반드시 `crawl_script.py` 안의 Scrapling 또는 Playwright로 한다.
 
 ### Step 2-A: 인증 처리
 
 로그인이 필요한 경우:
+
+Codex iab는 인증 쿠키를 내보내는 경로가 아니므로, 로그인·쿠키 전달이 필요한 경우에는 이 단계에서 agent-browser 전용 프로필 경로로 전환한다. iab에서 로그인 세션이나 브라우저 저장소를 읽으려 하지 않는다.
 
 0. **먼저 `agent-browser close --all`.** 정찰로 이미 데몬이 떠 있으면 이후 호출의
    `--headed`·`--profile`·`--session` 이 **경고 한 줄만 남기고 무시된다**

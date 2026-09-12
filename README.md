@@ -177,10 +177,11 @@ python -m venv .venv && . .venv/bin/activate && python scripts/bootstrap.py
 | **Scrapling** (`[fetchers]`)  | 데이터 수집 (HTTP·브라우저, 셀렉터 자가치유). fetcher 런타임(curl_cffi/playwright/patchright 등)이 함께 들어옴 | `pip install -r requirements.txt`                                  |
 | **Chromium**                    | 브라우저 렌더링(DynamicFetcher/StealthyFetcher)                                                                 | `scrapling install` (playwright Chromium 1회 다운로드)             |
 | **openpyxl**                    | 엑셀(.xlsx) 출력                                                                                                | (requirements.txt에 포함)                                            |
-| **agent-browser**               | **표준 정찰 도구** — 구조 파악·네트워크 감시 (양 host 공통)                                             | `npm.cmd install -g agent-browser` + `agent-browser.cmd install` |
+| **Codex 내장 브라우저(iab)** | **Codex 표준 정찰 도구** — 구조·셀렉터·페이지네이션·건수 확인 | Codex에 기본 제공 |
+| **agent-browser**               | Claude의 표준 정찰, Codex의 네트워크 감시·로그인 보조                                             | `npm.cmd install -g agent-browser` + `agent-browser.cmd install` |
 | **Chrome / Chrome for Testing** | 브라우저 세션이 필요한 사이트 대응 (CDP)                                                                        | `agent-browser install` 이 함께 처리                               |
 
-> **왜 정찰에만 Node 런타임(agent-browser)이 따로 필요한가.** Playwright 는 Scrapling 을 깔 때 이미 함께 들어옵니다. 그런데도 agent-browser 를 쓰는 이유는 이 도구가 AI 에이전트가 다루기 좋은 형태(snapshot/ref)로 설계돼 있어 **같은 정찰을 훨씬 적은 토큰으로** 끝내기 때문입니다. 두 번째 런타임을 설치하는 비용을 주고 그 편의를 산 것이고 의식적인 선택입니다. 수집에는 쓰지 않습니다. 정찰과 수집은 분리돼 있습니다.
+> **Codex의 정찰 기본은 내장 브라우저(iab)입니다.** iab는 구조·셀렉터·페이지네이션 확인에 쓰고, 일반 XHR/fetch 캡처나 로그인·쿠키 전달이 필요할 때만 agent-browser를 보조로 씁니다. Claude는 agent-browser를 기본으로 유지합니다. 어떤 정찰 브라우저도 수집에 쓰지 않으며 수집은 `crawl_script.py`에서만 합니다.
 
 ---
 
