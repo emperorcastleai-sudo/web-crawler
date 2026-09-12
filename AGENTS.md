@@ -8,6 +8,12 @@
 - **커밋·push는 항상 `origin`으로.** `upstream`에는 절대 push하지 않는다. fingerprints·output 등 사용자 수집 데이터가 원본 저작자 repo에 누적되지 않도록 한다.
 - 원본 변경이 필요하면 `git fetch upstream` 후 필요한 범위만 병합하거나 체리픽한다. `git push upstream ...`은 시도하지 않는다.
 
+## 추가 개발의 브랜치·PR 검증
+
+새 기능, 동작·구조 변경, 여러 파일의 코드·테스트 수정만 Claude ↔ Codex 공용 GitHub PR 릴레이를 따른다. 절차 정본은 `/Users/hwangjaeseong/Claude/CLAUDE.md`의 “Claude ↔ Codex 릴레이”와 `docs/decisions/0001-git-relay.md`, `docs/decisions/0002-relay-conventions.md`, `docs/decisions/0006-pr-based-relay.md`다. 이 레포의 브랜치·PR·push 대상은 항상 `origin`이며 `upstream`에는 push하지 않는다.
+
+문서 단독 정정, 생성 미러·도메인 목록 동기화, append-only 작업 로그는 추가 개발이 아니므로 브랜치·PR 의무 대상에서 제외한다. 다만 관련 검사와 검토는 수행한다.
+
 ## 최초 환경 셋업 (클론 직후 1회)
 
 수집 전에 환경을 준비한다. **한 명령**으로 단계별 설치+검증을 하고, 이미 된 단계는 skip한다:
